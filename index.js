@@ -41,6 +41,28 @@ app.get('/users', (req,res) => {
     })
 })
 
+//add a new user
+app.post('/user', (req, res) => {
+    let name = req.body.name;
+    let lastname = req.body.lastname;
+    let phone = req.body.phone;
+    let role = req.body.role;
+    let address = req.body.address;
+    let username = req.body.username;
+    let password = req.body.password;
+
+    //validation
+    if (!name || !lastname || !phone || !role || !address || !username || !password){
+        return res.status(400).send({ error: true, message: "Please provide information."});
+    }
+    else{
+        dbCon.query('INSERT INTO user (name, lastname, phone, role, address, username, password) VALUES(?,?,?,?,?,?,?)',[name, lastname, phone, role, address, username, password],(error , results, fields) => {
+            if(error) throw error;
+            return res.send({error: false, data: results, message: "user Successfully added"})
+        })
+    }
+})
+
 app.listen(5001, () => {
     console.log('Node App run on port 5001');
 })

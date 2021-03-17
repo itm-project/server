@@ -141,6 +141,30 @@ app.delete('/user', (req, res) => {
 
 })
 
+//register
+
+app.post('/user/register', (req, res) => {
+    let name = req.body.name;
+    let lastname = req.body.lastname;
+    let phone = req.body.phone;
+    //let role = req.body.role;
+    let address = req.body.address;
+    let username = req.body.username;
+    let password = req.body.password;
+
+    if (!name || !lastname || !phone || !address || !username || !password){
+        return res.status(400).send({ error: true, message: "Please provide information."});
+    }
+    else{
+        dbCon.query('INSERT INTO user (name, lastname, phone, role, address, username, password) VALUES(?,?,?,?,?,?,?)',[name, lastname, phone, 0, address, username, password],(error , results, fields) => {
+            if(error) throw error;
+            return res.send({error: false, data: results, message: "user Successfully register"})
+        })
+    }
+
+})
+
+
 app.listen(5001, () => {
     console.log('Node App run on port 5001');
 })

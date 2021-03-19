@@ -35,7 +35,7 @@ app.get('/users', (req, res) => {
             message = "user table is empty";
         }
         else {
-            message = "Succrssfully retrieved all books";
+            message = "Succrssfully retrieved all users";
         }
         return res.send({ error: false, data: results, message: message });
     })
@@ -203,40 +203,232 @@ app.post('/user/register', (req, res) => {
 })
 
 // login
-app.get('/login', (req,res) => {
+app.get('/login', (req, res) => {
     let username = req.body.username;
     let password = req.body.password;
 
-    if(!username){
+    if (!username && !password) {
+        return res.status(400).send({ error: true, message: "โปรดกรอกชื่อผู้ใช้และรหัสผ่าน" });
+    }
+    else if (!username) {
         return res.status(400).send({ error: true, message: "โปรดกรอกชื่อผู้ใช้" });
     }
-    else if(!password){
+    else if (!password) {
         return res.status(400).send({ error: true, message: "โปรดกรอกรหัสผ่าน" });
     }
-    else{
-        dbCon.query('SELECT * FROM user WHERE username = ? ', username,(error, results, fields) => {
+    else {
+        dbCon.query('SELECT * FROM user WHERE username = ? ', username, (error, results, fields) => {
             if (error) throw error;
 
             //console.log(results.length==1);
-            if(results.length == 1){
-                dbCon.query('SELECT * FROM user WHERE username = ? AND password = ?', [username,password],(error, results, fields) => {
+            if (results.length == 1) {
+                dbCon.query('SELECT * FROM user WHERE username = ? AND password = ?', [username, password], (error, results, fields) => {
                     if (error) throw error;
 
-                    if(results.length == 1){
-                        return res.send({error: false,message: "เข้าสู่ระบบสำเร็จ"});
+                    if (results.length == 1) {
+                        return res.send({ error: false, data: results, message: "เข้าสู่ระบบสำเร็จ" });
                     }
                     else {
-                        return res.send({error: false,message: "รหัสผ่านไม่ถูกต้อง"});
+                        return res.send({ error: true, data: results, message: "รหัสผ่านไม่ถูกต้อง" });
                     }
-                        
+
                 })
             }
-            else{
-                return res.send({error: false,message: "ไม่ชื่อผู้ใช้นี้"});
+            else {
+                return res.send({ error: true, data: results, message: "ไม่ชื่อผู้ใช้นี้" });
             }
-  
+
         })
     }
+})
+
+//get important notification
+app.get('/notification/important', (req, res) => {
+    dbCon.query('SELECT * FROM important_notification WHERE status = 1', (error, results, fields) => {
+        if (error) throw error;
+
+        return res.send({ error: false, data: results, message: "ดึงแจ้งเตือนสำคัญเสร็จสิ้น" });
+    })
+})
+
+//get news notification
+app.get('/notification/news', (req, res) => {
+    dbCon.query('SELECT * FROM (SELECT * FROM news) AS news INNER JOIN (SELECT * FROM notification) AS notification ON news.notification_id = notification.noti_id WHERE notification.status = 0',
+        (error, results, fields) => {
+            if (error) throw error;
+
+            return res.send({ error: false, data: results, message: "ดึงแจ้งเตือนข่าวเสร็จสิ้น" });
+        })
+})
+
+//get news 
+app.get('/news', (req, res) => {
+    global.news = "[";
+    //JSON news
+
+    dbCon.query('SELECT * FROM news', (error, results, fields) => {
+        if (error) throw error;
+
+        var i = (results.length) - 1;
+        var j = 0;
+
+        for (i; i >= 0 && j < 5; i--, j++) {
+
+            news += JSON.stringify(results[i]);
+            //console.log(i);
+            if (i > 0 && j < 4) news += ",";
+
+        }
+        news += "]"
+        news = JSON.parse(news);
+        return res.send({ error: false, data: news, message: "ดึงข่าวเสร็จสิ้น" });
+    })
+})
+
+//add travel history
+app.post('/history', (req, res) => {
+    let latitude = req.body.latitude;
+    let longtitude = req.body.longtitude;
+    let time = req.body.time;
+    let username = req.body.username;
+
+    global.user_id;
+    global.sp;
+    global.sp1;
+
+    if (!username) {
+        return res.status(400).send({ error: true, message: "โปรดกรอกชื่อผู้ใช่" });
+    }
+    else {
+        dbCon.query('SELECT user_id FROM user WHERE username = ?', username, function (error, results, fields) {
+
+            if (results.length == 0) return res.status(400).send({ error: true, message: "ไม่มีชื่อผู้ใช้นี้" });
+
+            else {
+                user_id = JSON.stringify(results);
+                user_id = user_id.split(":");
+                user_id = user_id[1].split("}");
+                console.log(user_id[0]);
+                //return res.send({error:false ,data: results});
+
+                dbCon.query('INSERT INTO travel_history (time , latitude, longtitude,user_id) VALUES (?,?,?,?)', [time, latitude, longtitude, user_id[0]],
+                    (error, results, fields) => {
+                        if (error) throw error;
+
+                        if (!time || !latitude || !longtitude || !user_id) {
+                            return res.status(400).send(message = "ข้อมูลไม่เพียงพอ");
+                        }
+                        else {
+                            return res.send({ error: false, data: results, message: "บันทึกประวัติสำเร็จ" })
+                        }
+                    })
+            }
+
+        })
+    }
+})
+
+//get province
+app.get('/provinces', (req, res) => {
+    dbCon.query('SELECT * FROM province', (error, results, fields) => {
+        if (error) throw error;
+
+        let message = ""
+        if (results === undefined || results.length == 0) {
+            message = "province table is empty";
+        }
+        else {
+            message = "Succrssfully retrieved all province";
+        }
+        return res.send({ error: false, data: results, message: message });
+    })
+})
+
+//get district
+app.post('/districts', (req, res) => {
+    let provincename = req.body.provincename
+    global.provinceID;
+
+
+    if (!provincename) {
+        return res.status(400).send({ error: true, message: "โปรดใส่ชื่อจังหวัด" });
+    }
+    else {
+        dbCon.query('SELECT ProvinceID FROM province WHERE  ProvinceThai = ?', provincename, (error, results, fields) => {
+            if (error) throw error;
+
+            if (results.length <= 0) {
+
+                return res.send({ error: true, message: "ไม่มีข้อมูลจังหวัดนี้" });
+            }
+            else {
+                provinceID = JSON.stringify(results);
+                //console.log(provinceID);
+                provinceID = provinceID.split(":");
+                provinceID = provinceID[1].split("}");
+                //console.log(provinceID[0]);
+
+                dbCon.query('SELECT * FROM district WHERE ProvinceID = ?', provinceID[0], function (error, results, fields) {
+                    if (error) throw error;
+
+                    let message = ""
+                    if (results === undefined || results.length == 0) {
+                        message = "province table is empty";
+                    }
+                    else {
+                        message = "Succrssfully retrieved all district";
+                    }
+                    return res.send({ error: false, data: results, message: message });
+                })
+            }
+        })
+    }
+
+
+})
+
+//get tambon
+app.post('/tambons', (req, res) => {
+    let districtname = req.body.districtname
+    global.districtID;
+
+    if (!districtname) {
+        return res.status(400).send({ error: true, message: "โปรดใส่ชื่ออำเภอ" });
+    }
+    else {
+        dbCon.query('SELECT DistrictID FROM district WHERE  DistrictThai = ?', districtname, (error, results, fields) => {
+            if (error) throw error;
+
+            if (results.length <= 0) {
+
+                return res.send({ error: true, message: "ไม่มีข้อมูลอำเภอนี้" });
+            }
+            else {
+
+                districtID = JSON.stringify(results);
+                //console.log(districtID);
+                districtID = districtID.split(":");
+                //console.log(districtID[1]);
+                districtID = districtID[1].split("}");
+                //console.log(districtID[0]);
+
+                dbCon.query('SELECT * FROM tambon WHERE DistrictID = ?', districtID[0], (error, results, fields) => {
+                    if (error) throw error;
+
+                    let message = ""
+                    if (results === undefined || results.length == 0) {
+                        message = "province table is empty";
+                    }
+                    else {
+                        message = "Succrssfully retrieved all tambon";
+                    }
+                    return res.send({ error: false, data: results, message: message });
+                })
+            }
+        })
+    }
+
+
 })
 
 app.listen(5001, () => {

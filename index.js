@@ -64,8 +64,8 @@ app.post('/user', (req, res) => {
 })
 
 //retrieve by username
-app.get('/user/:username', (req, res) => {
-    let username = req.params.username;
+app.get('/user/profile', (req, res) => {
+    let username = req.body.username;
 
     if (!username) {
         return res.status(400).send({ error: true, message: "Please provide username" })
@@ -77,11 +77,12 @@ app.get('/user/:username', (req, res) => {
             let message = "";
             if (results === undefined || results.length == 0) {
                 message = "username not found";
+                return res.send(null)
             }
             else {
                 message = "Successfully retrieved user data";
             }
-            return res.send({ error: false, data: results[0], message: message })
+            return res.send(results[0])
         })
     }
 })
@@ -161,18 +162,18 @@ app.post('/user/register', (req, res) => {
 
 
     if (!username) {
-        return res.status(400).send({ error: true, message: "โปรดกรอกชื่อผู้ใช่" });
+        return res.status(400).send("โปรดกรอกชื่อผู้ใช่");
     }
     else {
         dbCon.query('SELECT * FROM user WHERE username = ?', username, function (error, results, fields) {
             if (error) throw error;
 
             if (results.length >= 1) {
-                return res.send({ error: true, message: "ชื่อผู้ใช้นี้ถูกใช้แล้ว" });
+                return res.send("ชื่อผู้ใช้นี้ถูกใช้แล้ว");
             }
 
             if ((!number || !subDistrict || !district || !province || !postcode)) {
-                return res.status(400).send({ error: true, message: "โปรดกรอกข้อมูลที่อยู่" });
+                return res.status(400).send("โปรดกรอกข้อมูลที่อยู่");
             }
             else {
 
@@ -183,7 +184,7 @@ app.post('/user/register', (req, res) => {
                         addressId = results.insertId
 
                         if ((!name || !lastname || !phone || !password)) {
-                            return res.status(400).send({ error: true, message: "โปรดกรอกข้อมูลผู้ใช้" });
+                            return res.status(400).send("โปรดกรอกข้อมูลผู้ใช้");
                         }
                         else {
                             addressId = String(addressId);
@@ -191,7 +192,7 @@ app.post('/user/register', (req, res) => {
                                 [name, lastname, phone, 2, addressId, username, password], function (error, results, fields) {
 
                                     if (error) throw error;
-                                    return res.send({ error: false, data: results, message: "สมัครสมาชิกเสร็จสิ้น" })
+                                    return res.send(results)
                                 })
                         }
 
@@ -208,13 +209,13 @@ app.get('/login', (req, res) => {
     let password = req.body.password;
 
     if (!username && !password) {
-        return res.status(400).send({ error: true, message: "โปรดกรอกชื่อผู้ใช้และรหัสผ่าน" });
+        return res.status(400).send("โปรดกรอกชื่อผู้ใช้และรหัสผ่าน");
     }
     else if (!username) {
-        return res.status(400).send({ error: true, message: "โปรดกรอกชื่อผู้ใช้" });
+        return res.status(400).send("โปรดกรอกชื่อผู้ใช้");
     }
     else if (!password) {
-        return res.status(400).send({ error: true, message: "โปรดกรอกรหัสผ่าน" });
+        return res.status(400).send("โปรดกรอกรหัสผ่าน");
     }
     else {
         dbCon.query('SELECT * FROM user WHERE username = ? ', username, (error, results, fields) => {
@@ -226,16 +227,16 @@ app.get('/login', (req, res) => {
                     if (error) throw error;
 
                     if (results.length == 1) {
-                        return res.send({ error: false, data: results, message: "เข้าสู่ระบบสำเร็จ" });
+                        return res.send(results);
                     }
                     else {
-                        return res.send({ error: true, data: results, message: "รหัสผ่านไม่ถูกต้อง" });
+                        return res.send("รหัสผ่านไม่ถูกต้อง");
                     }
 
                 })
             }
             else {
-                return res.send({ error: true, data: results, message: "ไม่ชื่อผู้ใช้นี้" });
+                return res.send("ไม่ชื่อผู้ใช้นี้");
             }
 
         })
@@ -247,7 +248,7 @@ app.get('/notification/important', (req, res) => {
     dbCon.query('SELECT * FROM important_notification WHERE status = 1', (error, results, fields) => {
         if (error) throw error;
 
-        return res.send({ error: false, data: results, message: "ดึงแจ้งเตือนสำคัญเสร็จสิ้น" });
+        return res.send(results);
     })
 })
 
@@ -256,8 +257,13 @@ app.get('/notification/news', (req, res) => {
     dbCon.query('SELECT * FROM (SELECT * FROM news) AS news INNER JOIN (SELECT * FROM notification) AS notification ON news.notification_id = notification.noti_id WHERE notification.status = 0',
         (error, results, fields) => {
             if (error) throw error;
+            //console.log(results.length)
+            if (results.length >= 1) {
 
-            return res.send({ error: false, data: results, message: "ดึงแจ้งเตือนข่าวเสร็จสิ้น" });
+                //dbCon.query('UPDATE notification SET status = 1 WHERE status = 0')
+            }
+
+            return res.send(results);
         })
 })
 
@@ -281,7 +287,18 @@ app.get('/news', (req, res) => {
         }
         news += "]"
         news = JSON.parse(news);
-        return res.send({ error: false, data: news, message: "ดึงข่าวเสร็จสิ้น" });
+        return res.send(news);
+    })
+})
+
+//get news by name
+app.get('/news/name', (req, res) => {
+    let name = req.body.name;
+
+    dbCon.query('SELECT * FROM news WHERE name = ?', name, (error, results, fields) => {
+        if (error) throw error;
+
+        return res.send(results);
     })
 })
 
@@ -297,12 +314,12 @@ app.post('/history', (req, res) => {
     global.sp1;
 
     if (!username) {
-        return res.status(400).send({ error: true, message: "โปรดกรอกชื่อผู้ใช่" });
+        return res.status(400).send("โปรดกรอกชื่อผู้ใช่");
     }
     else {
         dbCon.query('SELECT user_id FROM user WHERE username = ?', username, function (error, results, fields) {
 
-            if (results.length == 0) return res.status(400).send({ error: true, message: "ไม่มีชื่อผู้ใช้นี้" });
+            if (results.length == 0) return res.status(400).send("ไม่มีชื่อผู้ใช้นี้");
 
             else {
                 user_id = JSON.stringify(results);
@@ -319,7 +336,7 @@ app.post('/history', (req, res) => {
                             return res.status(400).send(message = "ข้อมูลไม่เพียงพอ");
                         }
                         else {
-                            return res.send({ error: false, data: results, message: "บันทึกประวัติสำเร็จ" })
+                            return res.send(results)
                         }
                     })
             }
@@ -340,7 +357,7 @@ app.get('/provinces', (req, res) => {
         else {
             message = "Succrssfully retrieved all province";
         }
-        return res.send({ error: false, data: results, message: message });
+        return res.send(results);
     })
 })
 
@@ -351,7 +368,7 @@ app.post('/districts', (req, res) => {
 
 
     if (!provincename) {
-        return res.status(400).send({ error: true, message: "โปรดใส่ชื่อจังหวัด" });
+        return res.status(400).send("โปรดใส่ชื่อจังหวัด");
     }
     else {
         dbCon.query('SELECT ProvinceID FROM province WHERE  ProvinceThai = ?', provincename, (error, results, fields) => {
@@ -359,7 +376,7 @@ app.post('/districts', (req, res) => {
 
             if (results.length <= 0) {
 
-                return res.send({ error: true, message: "ไม่มีข้อมูลจังหวัดนี้" });
+                return res.send("ไม่มีข้อมูลจังหวัดนี้");
             }
             else {
                 provinceID = JSON.stringify(results);
@@ -378,7 +395,7 @@ app.post('/districts', (req, res) => {
                     else {
                         message = "Succrssfully retrieved all district";
                     }
-                    return res.send({ error: false, data: results, message: message });
+                    return res.send(results);
                 })
             }
         })
@@ -393,7 +410,7 @@ app.post('/tambons', (req, res) => {
     global.districtID;
 
     if (!districtname) {
-        return res.status(400).send({ error: true, message: "โปรดใส่ชื่ออำเภอ" });
+        return res.status(400).send("โปรดใส่ชื่ออำเภอ");
     }
     else {
         dbCon.query('SELECT DistrictID FROM district WHERE  DistrictThai = ?', districtname, (error, results, fields) => {
@@ -401,7 +418,7 @@ app.post('/tambons', (req, res) => {
 
             if (results.length <= 0) {
 
-                return res.send({ error: true, message: "ไม่มีข้อมูลอำเภอนี้" });
+                return res.send("ไม่มีข้อมูลอำเภอนี้");
             }
             else {
 
@@ -422,7 +439,7 @@ app.post('/tambons', (req, res) => {
                     else {
                         message = "Succrssfully retrieved all tambon";
                     }
-                    return res.send({ error: false, data: results, message: message });
+                    return res.send(results);
                 })
             }
         })
@@ -431,8 +448,49 @@ app.post('/tambons', (req, res) => {
 
 })
 
+
+//get news pic
+app.use('/picNews', express.static('./picNews'));
+const multer = require('multer');
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, './picNews');
+    },
+    filename: function (req, file, cb) {
+        cb(null, file.originalname);
+    }
+});
+const uploadImg = multer({ storage: storage }).single('image');
+/*module.exports = { 
+    uploadImg    
+};*/
+app.post('/newspic', uploadImg /*insert this guy*/);
+
+app.post('/news/pic', (req, res) => {
+    let newsname = req.body.newsname;
+
+    fs = require('fs');
+    fs.readdir('E:/NodeJS_MIT_api/picNews', function (err, files) {
+        if (err) {
+            console.log(err);
+            return;
+        }
+
+        for (var i = 0; i < files.length; i++) {
+            var name = files[i].split('.');
+
+            //console.log(newsname+" "+name[0]);
+            if (name[0] == newsname) {
+                return res.sendFile('E:/NodeJS_MIT_api/picNews/' + newsname + '.jpg');
+            }
+
+        }
+        return res.sendFile('E:/NodeJS_MIT_api/picNews/default.jpg');
+    });
+
+})
+
 app.listen(5001, () => {
     console.log('Node App run on port 5001');
 })
-
 module.exports = app;

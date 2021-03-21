@@ -63,26 +63,26 @@ app.post('/user', (req, res) => {
     }
 })
 
-//retrieve by username
-app.get('/user/profile', (req, res) => {
-    let username = req.body.username;
+//retrieve by userID
+app.post('/user/profile', (req, res) => {
+    let userID = req.body.userID;
 
-    if (!username) {
-        return res.status(400).send({ error: true, message: "Please provide username" })
+    if (!userID) {
+        return res.status(400).send("Please provide username" )
     }
     else {
-        dbCon.query("SELECT * FROM user WHERE username = ?", username, (error, results, fields) => {
+        dbCon.query("SELECT * FROM user WHERE user_id = ?", userID, (error, results, fields) => {
             if (error) throw error;
 
             let message = "";
             if (results === undefined || results.length == 0) {
-                message = "username not found";
+                message = "userID not found";
                 return res.send(null)
             }
             else {
                 message = "Successfully retrieved user data";
             }
-            return res.send(results[0])
+            return res.send(results)
         })
     }
 })
@@ -204,7 +204,7 @@ app.post('/user/register', (req, res) => {
 })
 
 // login
-app.get('/login', (req, res) => {
+app.post('/login', (req, res) => {
     let username = req.body.username;
     let password = req.body.password;
 
@@ -292,7 +292,7 @@ app.get('/news', (req, res) => {
 })
 
 //get news by name
-app.get('/news/name', (req, res) => {
+app.post('/news/name', (req, res) => {
     let name = req.body.name;
 
     dbCon.query('SELECT * FROM news WHERE name = ?', name, (error, results, fields) => {

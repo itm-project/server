@@ -63,30 +63,6 @@ app.post('/user', (req, res) => {
     }
 })
 
-//retrieve by userID
-app.post('/user/profile', (req, res) => {
-    let userID = req.body.userID;
-
-    if (!userID) {
-        return res.status(400).send("Please provide username" )
-    }
-    else {
-        dbCon.query("SELECT * FROM user WHERE user_id = ?", userID, (error, results, fields) => {
-            if (error) throw error;
-
-            let message = "";
-            if (results === undefined || results.length == 0) {
-                message = "userID not found";
-                return res.send(null)
-            }
-            else {
-                message = "Successfully retrieved user data";
-            }
-            return res.send(results)
-        })
-    }
-})
-
 //update user by username
 app.put('/user', (req, res) => {
     let username = req.body.username;
@@ -138,6 +114,44 @@ app.delete('/user', (req, res) => {
 
 })
 
+//retrieve by userID
+app.post('/user/profile', (req, res) => {
+    let userID = req.body.userID;
+
+    if (!userID) {
+        return res.status(400).send("Please provide username")
+    }
+    else {
+        dbCon.query("SELECT * FROM user WHERE user_id = ?", userID, (error, results, fields) => {
+            if (error) throw error;
+
+
+            if (results === undefined || results.length == 0) {
+
+                return res.send(null)
+            }
+
+            return res.send(results)
+        })
+    }
+})
+
+//get address
+app.post('/address', (req, res) => {
+    let addressId = req.body.addressId;
+
+    if (!addressId) {
+        return res.status(400).send("error");
+    }
+    else {
+        dbCon.query('SELECT address_id,number,moo,road,TambonThai,DistrictThai,ProvinceThai,postcode FROM (SELECT address_id,number,moo,road,TambonThai,DistrictThai,province,postcode FROM (SELECT address_id,number,moo,road,TambonThai,district,province,postcode FROM  (SELECT * FROM address WHERE address_id=?  ) AS address INNER JOIN tambon ON address.`sub-district` = tambon.TambonID) AS tambon INNER JOIN district ON tambon.district = district.DistrictID) AS district INNER JOIN province ON district.province = province.ProvinceID', addressId,
+            (err, results) => {
+                if (err) throw err;
+
+                return res.send(results[0]);
+            })
+    }
+})
 
 //register
 app.post('/user/register', (req, res) => {
@@ -155,48 +169,133 @@ app.post('/user/register', (req, res) => {
     let province = req.body.province;
     let postcode = req.body.postcode;
 
-    let request = req.body.request;
-
     global.userUsed = Boolean(false)
     global.addressId = 0;
+    global.provinceID;
+    global.districtID;
+    global.tambonID;
+    global.str;
 
 
     if (!username) {
-        return res.status(400).send("โปรดกรอกชื่อผู้ใช่");
+        str = '{"message":"โปรดกรอกชื่อผู้ใช่"}'
+        return res.send(JSON.parse(str));
     }
+   /* else if (!password) {
+        str = '{"message":"โปรดกรอกรหัสผ่าน"}'
+        return res.send(JSON.parse(str));
+    }
+    else if (!name) {
+        str = '{"message":"โปรดกรอกชื่อ"}'
+        return res.send(JSON.parse(str));
+    }
+    else if (!lastname) {
+        str = '{"message":"โปรดกรอกนามสกุล"}'
+        return res.send(JSON.parse(str));
+    }
+    else if (!phone) {
+        str = '{"message":"โปรดกรอกหมายเลขโทรศัพท์"}'
+        return res.send(JSON.parse(str));
+    }*/
     else {
         dbCon.query('SELECT * FROM user WHERE username = ?', username, function (error, results, fields) {
             if (error) throw error;
 
             if (results.length >= 1) {
-                return res.send("ชื่อผู้ใช้นี้ถูกใช้แล้ว");
+                str = '{"message":"ชื่อผู้ใช้นี้ถูกใช้แล้ว"}'
+                return res.send(JSON.parse(str));
             }
-
-            if ((!number || !subDistrict || !district || !province || !postcode)) {
-                return res.status(400).send("โปรดกรอกข้อมูลที่อยู่");
+            else if (!number) {
+                str = '{"message":"โปรดใส่เลขที่ที่อยู่"}'
+                return res.send(JSON.parse(str));
+            }
+            else if (!province) {
+                str = '{"message":"โปรดใส่ชื่อจังหวัด"}'
+                return res.send(JSON.parse(str));
+            }
+            else if (!district) {
+                str = '{"message":"โปรดใส่ชื่ออำเภอ"}'
+                return res.send(JSON.parse(str));
+            }
+            else if (!subDistrict) {
+                str = '{"message": "โปรดใส่ชื่อตำบล"}'
+                return res.send(JSON.parse(str));
+            }
+            else if (!postcode) {
+                str = '{"message": "โปรดใส่รหัสไปรษณี"}'
+                return res.send(JSON.parse(str));
             }
             else {
+                dbCon.query('SELECT ProvinceID FROM province WHERE  ProvinceThai = ?', province, (error, results, fields) => {
+                    if (error) throw error;
 
-                dbCon.query('INSERT INTO address (number, moo, road, `sub-district`, district, province, postcode) VALUES(?,?,?,?,?,?,?)',
-                    [number, moo, road, subDistrict, district, province, postcode], function (error, results, fields) {
+                    if (results.length <= 0) {
+                        str = '{"message:"ไม่มีข้อมูลจังหวัดนี้"}'
+                        return res.send(JSON.parse(str));
+                    }
+                    else {
 
-                        if (error) throw error;
-                        addressId = results.insertId
+                        provinceID = JSON.stringify(results);
+                        //console.log(provinceID);
+                        provinceID = provinceID.split(":");
+                        provinceID = provinceID[1].split("}");
+                        //console.log(provinceID[0]);
+                        dbCon.query('SELECT DistrictID FROM district WHERE DistrictThai = ?', district, function (error, results, fields) {
+                            if (error) throw error;
 
-                        if ((!name || !lastname || !phone || !password)) {
-                            return res.status(400).send("โปรดกรอกข้อมูลผู้ใช้");
-                        }
-                        else {
-                            addressId = String(addressId);
-                            dbCon.query('INSERT INTO user (name, lastname, phone, role, address, username, password) VALUES(?,?,?,?,?,?,?)',
-                                [name, lastname, phone, 2, addressId, username, password], function (error, results, fields) {
+                            if (results.length <= 0) {
+                                str = '{"message":"ไม่มีข้อมูลอำเภอนี้"}'
+                                return res.send(JSON.parse(str));
+                            }
+                            else {
 
+                                districtID = JSON.stringify(results);
+                                //console.log(provinceID);
+                                districtID = districtID.split(":");
+                                districtID = districtID[1].split("}");
+                                //console.log(districtID[0]);
+                                dbCon.query('SELECT TambonID FROM tambon WHERE TambonThai = ?', subDistrict, function (error, results, fields) {
                                     if (error) throw error;
-                                    return res.send(results)
-                                })
-                        }
 
-                    })
+                                    if (results.length <= 0) {
+                                        str = '{"message":"ไม่มีข้อมูลตำบลนี้"}'
+                                        return res.send(JSON.parse(str));
+                                    }
+                                    else {
+                                        tambonID = JSON.stringify(results);
+                                        //console.log(provinceID);
+                                        tambonID = tambonID.split(":");
+                                        tambonID = tambonID[1].split("}");
+                                        //console.log(districtID[0]);
+                                        dbCon.query('INSERT INTO address (number, moo, road, `sub-district`, district, province, postcode) VALUES(?,?,?,?,?,?,?)',
+                                            [number, moo, road, tambonID[0], districtID[0], provinceID[0], postcode], function (error, results, fields) {
+
+                                                if (error) throw error;
+                                                addressId = results.insertId
+
+                                                if ((!name || !lastname || !phone || !password)) {
+                                                    str = '{"message":"โปรดกรอกข้อมูลผู้ใช้"}'
+                                                    return res.send(JSON.parse(str));
+                                                }
+                                                else {
+                                                    addressId = String(addressId);
+                                                    dbCon.query('INSERT INTO user (name, lastname, phone, role, address, username, password) VALUES(?,?,?,?,?,?,?)',
+                                                        [name, lastname, phone, 2, addressId, username, password], function (error, results, fields) {
+
+                                                            if (error) throw error;
+                                                            str = '{"message":"success"}'
+                                                            return res.send(JSON.parse(str));
+                                                        })
+                                                }
+
+                                            })
+                                    }
+
+                                })
+                            }
+                        })
+                    }
+                })
             }
 
         })
@@ -257,7 +356,7 @@ app.get('/notification/news', (req, res) => {
     dbCon.query('SELECT * FROM (SELECT * FROM news) AS news INNER JOIN (SELECT * FROM notification) AS notification ON news.notification_id = notification.noti_id WHERE notification.status = 0',
         (error, results, fields) => {
             if (error) throw error;
-            //console.log(results.length)
+
             if (results.length >= 1) {
 
                 //dbCon.query('UPDATE notification SET status = 1 WHERE status = 0')
@@ -270,7 +369,6 @@ app.get('/notification/news', (req, res) => {
 //get news 
 app.get('/news', (req, res) => {
     global.news = "[";
-    //JSON news
 
     dbCon.query('SELECT * FROM news', (error, results, fields) => {
         if (error) throw error;
@@ -281,7 +379,7 @@ app.get('/news', (req, res) => {
         for (i; i >= 0 && j < 5; i--, j++) {
 
             news += JSON.stringify(results[i]);
-            //console.log(i);
+
             if (i > 0 && j < 4) news += ",";
 
         }
@@ -326,7 +424,6 @@ app.post('/history', (req, res) => {
                 user_id = user_id.split(":");
                 user_id = user_id[1].split("}");
                 console.log(user_id[0]);
-                //return res.send({error:false ,data: results});
 
                 dbCon.query('INSERT INTO travel_history (time , latitude, longtitude,user_id) VALUES (?,?,?,?)', [time, latitude, longtitude, user_id[0]],
                     (error, results, fields) => {
@@ -345,113 +442,11 @@ app.post('/history', (req, res) => {
     }
 })
 
-//get province
-app.get('/provinces', (req, res) => {
-    dbCon.query('SELECT * FROM province', (error, results, fields) => {
-        if (error) throw error;
 
-        let message = ""
-        if (results === undefined || results.length == 0) {
-            message = "province table is empty";
-        }
-        else {
-            message = "Succrssfully retrieved all province";
-        }
-        return res.send(results);
-    })
-})
-
-//get district
-app.post('/districts', (req, res) => {
-    let provincename = req.body.provincename
-    global.provinceID;
-
-
-    if (!provincename) {
-        return res.status(400).send("โปรดใส่ชื่อจังหวัด");
-    }
-    else {
-        dbCon.query('SELECT ProvinceID FROM province WHERE  ProvinceThai = ?', provincename, (error, results, fields) => {
-            if (error) throw error;
-
-            if (results.length <= 0) {
-
-                return res.send("ไม่มีข้อมูลจังหวัดนี้");
-            }
-            else {
-                provinceID = JSON.stringify(results);
-                //console.log(provinceID);
-                provinceID = provinceID.split(":");
-                provinceID = provinceID[1].split("}");
-                //console.log(provinceID[0]);
-
-                dbCon.query('SELECT * FROM district WHERE ProvinceID = ?', provinceID[0], function (error, results, fields) {
-                    if (error) throw error;
-
-                    let message = ""
-                    if (results === undefined || results.length == 0) {
-                        message = "province table is empty";
-                    }
-                    else {
-                        message = "Succrssfully retrieved all district";
-                    }
-                    return res.send(results);
-                })
-            }
-        })
-    }
-
-
-})
-
-//get tambon
-app.post('/tambons', (req, res) => {
-    let districtname = req.body.districtname
-    global.districtID;
-
-    if (!districtname) {
-        return res.status(400).send("โปรดใส่ชื่ออำเภอ");
-    }
-    else {
-        dbCon.query('SELECT DistrictID FROM district WHERE  DistrictThai = ?', districtname, (error, results, fields) => {
-            if (error) throw error;
-
-            if (results.length <= 0) {
-
-                return res.send("ไม่มีข้อมูลอำเภอนี้");
-            }
-            else {
-
-                districtID = JSON.stringify(results);
-                //console.log(districtID);
-                districtID = districtID.split(":");
-                //console.log(districtID[1]);
-                districtID = districtID[1].split("}");
-                //console.log(districtID[0]);
-
-                dbCon.query('SELECT * FROM tambon WHERE DistrictID = ?', districtID[0], (error, results, fields) => {
-                    if (error) throw error;
-
-                    let message = ""
-                    if (results === undefined || results.length == 0) {
-                        message = "province table is empty";
-                    }
-                    else {
-                        message = "Succrssfully retrieved all tambon";
-                    }
-                    return res.send(results);
-                })
-            }
-        })
-    }
-
-
-})
-
-
-//get news pic
+//uplode pic
 app.use('/picNews', express.static('./picNews'));
 const multer = require('multer');
+const { json } = require('body-parser');
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, './picNews');
@@ -461,11 +456,10 @@ const storage = multer.diskStorage({
     }
 });
 const uploadImg = multer({ storage: storage }).single('image');
-/*module.exports = { 
-    uploadImg    
-};*/
+
 app.post('/newspic', uploadImg /*insert this guy*/);
 
+//get news pic
 app.post('/news/pic', (req, res) => {
     let newsname = req.body.newsname;
 

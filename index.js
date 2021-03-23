@@ -149,7 +149,7 @@ app.post('/address', (req, res) => {
             (err, results) => {
                 if (err) throw err;
 
-                return res.send(results[0]);
+                return res.send(results);
             })
     }
 })
@@ -179,7 +179,7 @@ app.post('/user/register', (req, res) => {
 
 
     if (!username) {
-        str = '{"message":"โปรดกรอกชื่อผู้ใช่"}'
+        str = '[{"message":"โปรดกรอกชื่อผู้ใช่"}]'
         return res.send(JSON.parse(str));
     }
    /* else if (!password) {
@@ -203,27 +203,27 @@ app.post('/user/register', (req, res) => {
             if (error) throw error;
 
             if (results.length >= 1) {
-                str = '{"message":"ชื่อผู้ใช้นี้ถูกใช้แล้ว"}'
+                str = '[{"message":"ชื่อผู้ใช้นี้ถูกใช้แล้ว"}]'
                 return res.send(JSON.parse(str));
             }
             else if (!number) {
-                str = '{"message":"โปรดใส่เลขที่ที่อยู่"}'
+                str = '[{"message":"โปรดใส่เลขที่ที่อยู่"}]'
                 return res.send(JSON.parse(str));
             }
             else if (!province) {
-                str = '{"message":"โปรดใส่ชื่อจังหวัด"}'
+                str = '[{"message":"โปรดใส่ชื่อจังหวัด"}]'
                 return res.send(JSON.parse(str));
             }
             else if (!district) {
-                str = '{"message":"โปรดใส่ชื่ออำเภอ"}'
+                str = '[{"message":"โปรดใส่ชื่ออำเภอ"}]'
                 return res.send(JSON.parse(str));
             }
             else if (!subDistrict) {
-                str = '{"message": "โปรดใส่ชื่อตำบล"}'
+                str = '[{"message": "โปรดใส่ชื่อตำบล"}]'
                 return res.send(JSON.parse(str));
             }
             else if (!postcode) {
-                str = '{"message": "โปรดใส่รหัสไปรษณี"}'
+                str = '[{"message": "โปรดใส่รหัสไปรษณี"}]'
                 return res.send(JSON.parse(str));
             }
             else {
@@ -231,7 +231,7 @@ app.post('/user/register', (req, res) => {
                     if (error) throw error;
 
                     if (results.length <= 0) {
-                        str = '{"message:"ไม่มีข้อมูลจังหวัดนี้"}'
+                        str = '[{"message":"ไม่มีข้อมูลจังหวัดนี้"}]'
                         return res.send(JSON.parse(str));
                     }
                     else {
@@ -245,7 +245,7 @@ app.post('/user/register', (req, res) => {
                             if (error) throw error;
 
                             if (results.length <= 0) {
-                                str = '{"message":"ไม่มีข้อมูลอำเภอนี้"}'
+                                str = '[{"message":"ไม่มีข้อมูลอำเภอนี้"}]'
                                 return res.send(JSON.parse(str));
                             }
                             else {
@@ -259,7 +259,7 @@ app.post('/user/register', (req, res) => {
                                     if (error) throw error;
 
                                     if (results.length <= 0) {
-                                        str = '{"message":"ไม่มีข้อมูลตำบลนี้"}'
+                                        str = '[{"message":"ไม่มีข้อมูลตำบลนี้"}]'
                                         return res.send(JSON.parse(str));
                                     }
                                     else {
@@ -275,7 +275,7 @@ app.post('/user/register', (req, res) => {
                                                 addressId = results.insertId
 
                                                 if ((!name || !lastname || !phone || !password)) {
-                                                    str = '{"message":"โปรดกรอกข้อมูลผู้ใช้"}'
+                                                    str = '[{"message":"โปรดกรอกข้อมูลผู้ใช้"}]'
                                                     return res.send(JSON.parse(str));
                                                 }
                                                 else {
@@ -284,7 +284,7 @@ app.post('/user/register', (req, res) => {
                                                         [name, lastname, phone, 2, addressId, username, password], function (error, results, fields) {
 
                                                             if (error) throw error;
-                                                            str = '{"message":"success"}'
+                                                            str = '[{"message":"success"}]'
                                                             return res.send(JSON.parse(str));
                                                         })
                                                 }
@@ -347,8 +347,13 @@ app.post('/login', (req, res) => {
 app.get('/notification/important', (req, res) => {
     dbCon.query('SELECT * FROM important_notification WHERE status = 1', (error, results, fields) => {
         if (error) throw error;
+        if(results<=0){
+            return res.send(null);
+        }
+        else{
+            return res.send(results);
+        }
 
-        return res.send(results);
     })
 })
 
@@ -387,6 +392,7 @@ app.get('/news', (req, res) => {
         news += "]"
         news = JSON.parse(news);
         return res.send(news);
+        //return res.send(results);
     })
 })
 

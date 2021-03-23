@@ -141,7 +141,8 @@ app.post('/address', (req, res) => {
     let addressId = req.body.addressId;
 
     if (!addressId) {
-        return res.status(400).send("error");
+        var str = '{"message":"โปรดกรอกที่อยู่นี้"}'
+        return res.send(JSON.parse(str));
     }
     else {
         dbCon.query('SELECT address_id,number,moo,road,TambonThai,DistrictThai,ProvinceThai,postcode FROM (SELECT address_id,number,moo,road,TambonThai,DistrictThai,province,postcode FROM (SELECT address_id,number,moo,road,TambonThai,district,province,postcode FROM  (SELECT * FROM address WHERE address_id=?  ) AS address INNER JOIN tambon ON address.`sub-district` = tambon.TambonID) AS tambon INNER JOIN district ON tambon.district = district.DistrictID) AS district INNER JOIN province ON district.province = province.ProvinceID', addressId,
@@ -403,8 +404,8 @@ app.post('/news/name', (req, res) => {
 //add travel history
 app.post('/history', (req, res) => {
     let latitude = req.body.latitude;
-    let longtitude = req.body.longtitude;
-    let time = req.body.time;
+    let longitude = req.body.longitude;
+    //let time = req.body.time;
     let username = req.body.username;
 
     global.user_id;
@@ -423,17 +424,32 @@ app.post('/history', (req, res) => {
                 user_id = JSON.stringify(results);
                 user_id = user_id.split(":");
                 user_id = user_id[1].split("}");
-                console.log(user_id[0]);
+                //console.log(user_id[0]);
+                var date01 = Math.floor(new Date().getTime()/1000);
+                //var date01 = new Date().toUTCString;
 
-                dbCon.query('INSERT INTO travel_history (time , latitude, longtitude,user_id) VALUES (?,?,?,?)', [time, latitude, longtitude, user_id[0]],
+                
+                dbCon.query('INSERT INTO travel_history (time , latitude, longtitude,user_id) VALUES (?,?,?,?)', [date01, latitude, longitude, user_id[0]],
                     (error, results, fields) => {
                         if (error) throw error;
 
-                        if (!time || !latitude || !longtitude || !user_id) {
+                        if (!latitude || !longitude || !user_id) {
                             return res.status(400).send(message = "ข้อมูลไม่เพียงพอ");
                         }
                         else {
-                            return res.send(results)
+                            //console.log(user_id[0]+"---------");
+                            dbCon.query('SELECT * FROM travel_history WHERE user_id = ?', user_id[0], function (error, results, fields) {
+                               
+                                if(error) throw error;
+                                
+                                if (results.length == 0) return res.status(400).send("ไม่มีชื่อผู้ใช้นี้");
+                                
+                                else {
+                                    
+                                    return res.send(results);
+                                }
+                    
+                            })
                         }
                     })
             }
@@ -441,6 +457,26 @@ app.post('/history', (req, res) => {
         })
     }
 })
+
+/*app.post('/history/travel', (req, res) => {
+    
+    let userID = req.body.userID;
+
+    if (!userID) {
+        return res.status(400).send("โปรดกรอกชื่อผู้ใช่");
+    }
+    else {
+        dbCon.query('SELECT * FROM history WHERE user_id = ?', userID, function (error, results, fields) {
+            if(error) throw error;
+            if (results.length == 0) return res.status(400).send("ไม่มีชื่อผู้ใช้นี้");
+
+            else {
+                return results;
+            }
+
+        })
+    }
+})*/
 
 
 //uplode pic
